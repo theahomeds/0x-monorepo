@@ -1,5 +1,18 @@
 [
     {
+        "version": "2.0.0",
+        "changes": [
+            {
+                "note": "Validate order signature and order is not cancelled in `validateOrderFillableOrThrowAsync`",
+                "pr": 1101
+            },
+            {
+                "note": "Validate order is not cancelled in `validateFillOrderThrowIfInvalidAsync`",
+                "pr": 1101
+            }
+        ]
+    },
+    {
         "version": "1.0.6",
         "changes": [
             {
