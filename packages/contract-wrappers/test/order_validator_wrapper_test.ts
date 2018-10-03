@@ -1,7 +1,8 @@
 import { BlockchainLifecycle, callbackErrorReporter } from '@0xproject/dev-utils';
 import { FillScenarios } from '@0xproject/fill-scenarios';
+import { getContractAddresses } from '@0xproject/migrations';
 import { assetDataUtils, orderHashUtils } from '@0xproject/order-utils';
-import { DoneCallback, SignedOrder } from '@0xproject/types';
+import { ContractAddresses, DoneCallback, SignedOrder } from '@0xproject/types';
 import { BigNumber } from '@0xproject/utils';
 import * as chai from 'chai';
 import { BlockParamLiteral } from 'ethereum-types';
@@ -21,10 +22,6 @@ const expect = chai.expect;
 const blockchainLifecycle = new BlockchainLifecycle(web3Wrapper);
 
 describe('OrderValidator', () => {
-    const contractWrappersConfig = {
-        networkId: constants.TESTRPC_NETWORK_ID,
-        blockPollingIntervalMs: 0,
-    };
     const fillableAmount = new BigNumber(5);
     const partialFillAmount = new BigNumber(2);
     let contractWrappers: ContractWrappers;
@@ -44,24 +41,32 @@ describe('OrderValidator', () => {
     let takerAssetData: string;
     let signedOrder: SignedOrder;
     let anotherSignedOrder: SignedOrder;
+    let contractAddresses: ContractAddresses;
+
     before(async () => {
         await blockchainLifecycle.startAsync();
-        contractWrappers = new ContractWrappers(provider, contractWrappersConfig);
-        exchangeContractAddress = contractWrappers.exchange.getContractAddress();
+        contractAddresses = getContractAddresses();
+        const config = {
+            networkId: constants.TESTRPC_NETWORK_ID,
+            contractAddresses,
+            blockPollingIntervalMs: 10,
+        };
+        contractWrappers = new ContractWrappers(provider, config);
+        exchangeContractAddress = contractWrappers.exchange.address;
         userAddresses = await web3Wrapper.getAvailableAddressesAsync();
-        zrxTokenAddress = tokenUtils.getProtocolTokenAddress();
+        zrxTokenAddress = contractWrappers.exchange.zrxTokenAddress;
         zrxTokenAssetData = assetDataUtils.encodeERC20AssetData(zrxTokenAddress);
         fillScenarios = new FillScenarios(
             provider,
             userAddresses,
             zrxTokenAddress,
             exchangeContractAddress,
-            contractWrappers.erc20Proxy.getContractAddress(),
-            contractWrappers.erc721Proxy.getContractAddress(),
+            contractWrappers.erc20Proxy.address,
+            contractWrappers.erc721Proxy.address,
         );
         [coinbase, makerAddress, takerAddress, feeRecipient, anotherMakerAddress] = userAddresses;
         [makerTokenAddress] = tokenUtils.getDummyERC20TokenAddresses();
-        takerTokenAddress = tokenUtils.getWethTokenAddress();
+        takerTokenAddress = contractAddresses.etherToken;
         [makerAssetData, takerAssetData] = [
             assetDataUtils.encodeERC20AssetData(makerTokenAddress),
             assetDataUtils.encodeERC20AssetData(takerTokenAddress),

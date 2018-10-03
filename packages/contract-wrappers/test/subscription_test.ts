@@ -1,12 +1,18 @@
 import { BlockchainLifecycle, callbackErrorReporter } from '@0xproject/dev-utils';
+import { getContractAddresses } from '@0xproject/migrations';
 import { DoneCallback } from '@0xproject/types';
 import { BigNumber } from '@0xproject/utils';
 import * as _ from 'lodash';
 import 'mocha';
 import * as Sinon from 'sinon';
 
-import { ContractWrappers, ERC20TokenApprovalEventArgs, ERC20TokenEvents } from '../src';
-import { DecodedLogEvent } from '../src/types';
+import {
+    ContractWrappers,
+    ContractWrappersConfig,
+    DecodedLogEvent,
+    ERC20TokenApprovalEventArgs,
+    ERC20TokenEvents,
+} from '../src';
 
 import { chaiSetup } from './utils/chai_setup';
 import { constants } from './utils/constants';
@@ -21,10 +27,13 @@ describe('SubscriptionTest', () => {
     let userAddresses: string[];
     let coinbase: string;
     let addressWithoutFunds: string;
-    const config = {
-        networkId: constants.TESTRPC_NETWORK_ID,
-    };
+    let config: ContractWrappersConfig;
+
     before(async () => {
+        config = {
+            networkId: constants.TESTRPC_NETWORK_ID,
+            contractAddresses: getContractAddresses(),
+        };
         contractWrappers = new ContractWrappers(provider, config);
         userAddresses = await web3Wrapper.getAvailableAddressesAsync();
         coinbase = userAddresses[0];

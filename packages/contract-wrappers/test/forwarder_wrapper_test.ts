@@ -1,5 +1,6 @@
 import { BlockchainLifecycle, callbackErrorReporter } from '@0xproject/dev-utils';
 import { FillScenarios } from '@0xproject/fill-scenarios';
+import { getContractAddresses } from '@0xproject/migrations';
 import { assetDataUtils, orderHashUtils } from '@0xproject/order-utils';
 import { DoneCallback, SignedOrder } from '@0xproject/types';
 import { BigNumber } from '@0xproject/utils';
@@ -7,8 +8,14 @@ import * as chai from 'chai';
 import { BlockParamLiteral } from 'ethereum-types';
 import 'mocha';
 
-import { ContractWrappers, ExchangeCancelEventArgs, ExchangeEvents, ExchangeFillEventArgs, OrderStatus } from '../src';
-import { DecodedLogEvent } from '../src/types';
+import {
+    ContractWrappers,
+    DecodedLogEvent,
+    ExchangeCancelEventArgs,
+    ExchangeEvents,
+    ExchangeFillEventArgs,
+    OrderStatus,
+} from '../src';
 
 import { chaiSetup } from './utils/chai_setup';
 import { constants } from './utils/constants';
@@ -20,10 +27,6 @@ const expect = chai.expect;
 const blockchainLifecycle = new BlockchainLifecycle(web3Wrapper);
 
 describe('ForwarderWrapper', () => {
-    const contractWrappersConfig = {
-        networkId: constants.TESTRPC_NETWORK_ID,
-        blockPollingIntervalMs: 0,
-    };
     const fillableAmount = new BigNumber(5);
     let contractWrappers: ContractWrappers;
     let fillScenarios: FillScenarios;
@@ -43,21 +46,26 @@ describe('ForwarderWrapper', () => {
     let anotherSignedOrder: SignedOrder;
     before(async () => {
         await blockchainLifecycle.startAsync();
-        contractWrappers = new ContractWrappers(provider, contractWrappersConfig);
-        exchangeContractAddress = contractWrappers.exchange.getContractAddress();
+        const config = {
+            networkId: constants.TESTRPC_NETWORK_ID,
+            contractAddresses: getContractAddresses(),
+            blockPollingIntervalMs: 10,
+        };
+        contractWrappers = new ContractWrappers(provider, config);
+        exchangeContractAddress = contractWrappers.exchange.address;
         userAddresses = await web3Wrapper.getAvailableAddressesAsync();
-        zrxTokenAddress = tokenUtils.getProtocolTokenAddress();
+        zrxTokenAddress = contractWrappers.exchange.zrxTokenAddress;
         fillScenarios = new FillScenarios(
             provider,
             userAddresses,
             zrxTokenAddress,
             exchangeContractAddress,
-            contractWrappers.erc20Proxy.getContractAddress(),
-            contractWrappers.erc721Proxy.getContractAddress(),
+            contractWrappers.erc20Proxy.address,
+            contractWrappers.erc721Proxy.address,
         );
         [coinbase, makerAddress, takerAddress, feeRecipient, anotherMakerAddress] = userAddresses;
         [makerTokenAddress] = tokenUtils.getDummyERC20TokenAddresses();
-        takerTokenAddress = tokenUtils.getWethTokenAddress();
+        takerTokenAddress = contractWrappers.forwarder.etherTokenAddress;
         [makerAssetData, takerAssetData] = [
             assetDataUtils.encodeERC20AssetData(makerTokenAddress),
             assetDataUtils.encodeERC20AssetData(takerTokenAddress),
